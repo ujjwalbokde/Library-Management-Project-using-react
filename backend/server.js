@@ -35,6 +35,7 @@ mongoose
   .catch((err) => {
     console.error("MongoDB connection error:", err);
   });
+
 app.get("/userData", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("-password");
@@ -47,6 +48,7 @@ app.get("/userData", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
 app.get("/", async (req, res) => {
   try {
     let allBooks = await Book.find();
