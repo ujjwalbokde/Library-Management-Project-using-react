@@ -12,32 +12,39 @@ const Login = () => {
   const [error, setError] = useState(null);
 
   const onSubmit = async (data) => {
-    try {
-      const response = await fetch("http://localhost:8080/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Send cookies along with the request
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-        }),
-      });
+  try {
+    const response = await fetch("http://localhost:8080/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      // ✅ Remove credentials: "include" - not needed for localStorage
+      body: JSON.stringify({
+        email: data.email,
+        password: data.password,
+      }),
+    });
 
-      if (response.ok) {
-        setError(null); // Clear error on successful login
-        window.location.href="/"
-
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to login. Please try again.");
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      setError("Failed to login. Please try again later.");
+    if (response.ok) {
+      const result = await response.json();
+      
+      // ✅ Save token directly to localStorage
+      localStorage.setItem('authToken', result.token);
+      
+      setError(null); // Clear error on successful login
+      console.log("Login successful, token saved to localStorage");
+      
+      window.location.href = "/";
+    } else {
+      const errorData = await response.json();
+      setError(errorData.message || "Failed to login. Please try again.");
     }
-  };
+  } catch (error) {
+    console.error("Login error:", error);
+    setError("Failed to login. Please try again later.");
+  }
+};
+
 
   return (
     <div className="text-center mx-[32%] my-[6%] text-amber-900">

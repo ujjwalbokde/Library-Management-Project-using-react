@@ -13,55 +13,95 @@ const Issue = () => {
 
   // Fetch book data by ID
   const getBookData = async () => {
-    try {
-      const response = await fetch(`http://localhost:8080/${id}/issue`, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
-      setBook(result);
-      setValue('book', result.name); // Set form value for book name
-      setValue('author', result.author); // Set form value for author name
-    } catch (err) {
-      console.error('Fetch book data error: ', err);
-      setError(err.message);
+  try {
+    // ✅ Get token from localStorage
+    const token = localStorage.getItem('authToken');
+    
+    const response = await fetch(`http://localhost:8080/${id}/issue`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // ✅ Use Authorization header instead of cookies
+      },
+      // ✅ Remove credentials: 'include'
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      // ✅ Handle authentication errors
+      console.log("Authentication failed for book data");
+      localStorage.removeItem('authToken');
+      window.location.href = "/login";
+      return;
     }
-  };
 
-  // Fetch user data
-  const getUserData = async () => {
-    try {
-        const response = await fetch("http://localhost:8080/userData", {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          credentials: "include" // Include credentials if needed
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const result = await response.json();
-        setUser(result);
-        setValue("username",result.username)
-        setValue("email",result.email)
-      } catch (err) {
-        console.error("Fetch error: ", err);
-        setError(err.message);
-      }
-  };
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-  useEffect(() => {
-    getBookData();
-    getUserData();
-  }, []);
+    const result = await response.json();
+    setBook(result);
+    setValue('book', result.name); // Set form value for book name
+    setValue('author', result.author); // Set form value for author name
+  } catch (err) {
+    console.error('Fetch book data error: ', err);
+    setError(err.message);
+  }
+};
+
+// Fetch user data
+const getUserData = async () => {
+  try {
+    // ✅ Get token from localStorage  
+    const token = localStorage.getItem('authToken');
+    
+    // ✅ Check if token exists
+    if (!token) {
+      console.log("No token found - redirecting to login");
+      window.location.href = "/login";
+      return;
+    }
+
+    const response = await fetch("http://localhost:8080/userData", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        'Authorization': `Bearer ${token}` // ✅ Use Authorization header instead of cookies
+      },
+      // ✅ Remove credentials: "include"
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      // ✅ Token is invalid or expired
+      console.log("Authentication failed for user data");
+      localStorage.removeItem('authToken');
+      window.location.href = "/login";
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    setUser(result);
+    setValue("username", result.username);
+    setValue("email", result.email);
+  } catch (err) {
+    console.error("Fetch error: ", err);
+    setError(err.message);
+    // ✅ On error, also check if we should clear invalid token
+    localStorage.removeItem('authToken');
+    window.location.href = "/login";
+  }
+};
+
+useEffect(() => {
+  getBookData();
+  getUserData();
+}, []);
+
 
   const onSubmit = async (data) => {
     try {

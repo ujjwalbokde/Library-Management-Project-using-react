@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { use } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 const defaultProfileImage = "/user.png"; // Path to your default profile image
@@ -11,26 +12,45 @@ const Profile = () => {
   const [isLoggedOut, setIsLoggedOut] = useState(false);
   const [photo, setPhoto] = useState(null);
 
-  const getUserData = async () => {
-    try {
-      const response = await fetch("http://localhost:8080/userData", {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Include credentials if needed
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
-      setUser(result);
-    } catch (err) {
-      console.error("Fetch user data error: ", err);
-      setError(err.message);
+// In your Profile component
+const getUserData = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    console.log(token)
+    
+    const response = await fetch("http://localhost:8080/userData", {
+      method: "GET",
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // ✅ Use Authorization header
+      },
+    });
+
+    if (response.status === 403 || response.status === 401) {
+      // User not authenticated, redirect to login
+      localStorage.removeItem('authToken');
+      navigate("/login");
+      return;
     }
-  };
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    setUser(result);
+  } catch (err) {
+    console.error("Fetch user data error: ", err);
+    setError(err.message);
+    localStorage.removeItem('authToken');
+    navigate("/login");
+  }
+};
+
+useEffect(() => {
+  getUserData();
+  getBookData();
+}, []);
 
   const getBookData = async () => {
     try {
@@ -85,24 +105,29 @@ const Profile = () => {
     getBookData();
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch("http://localhost:8080/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-      if (response.ok) {
-        setUser(null);
-        setIsLoggedOut(true);
-        // navigate("/login");
-        window.location.href = "/login";
-      } else {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-    } catch (error) {
-      console.error("Logout error: ", error);
-    }
-  };
+const handleLogout = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    
+    const response = await fetch("http://localhost:8080/logout", {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+    });
+
+    // ✅ Remove token from localStorage regardless of response
+    localStorage.removeItem('authToken');
+    setUser(null);
+    window.location.href = "/login";
+  } catch (error) {
+    console.error("Logout error: ", error);
+    // Even if logout fails, remove token and redirect
+    localStorage.removeItem('authToken');
+    window.location.href = "/login";
+  }
+};
   const handleUpload = async () => {
     if (!photo) {
       console.error("No file selected.");

@@ -3,21 +3,36 @@ import { NavLink } from "react-router-dom";
 
 const Navbar = ({ isAdmin, isLoggedIn,user }) => {
   const defaultProfileImage = "/user.png"; 
-    const handleLogout = async () => {
+    
+  const handleLogout = async () => {
     try {
+      const token = localStorage.getItem('authToken');
+      
       const response = await fetch("http://localhost:8080/logout", {
         method: "POST",
-        credentials: "include",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // ✅ Use Authorization header instead of cookies
+        },
+        // ✅ Remove credentials: "include" - not needed for localStorage
       });
+
+      // ✅ Always remove token from localStorage, regardless of response
+      localStorage.removeItem('authToken');
+      
       if (response.ok) {
-        setUser(null);
-        setIsLoggedOut(true);
-        navigate("/login");
+        console.log("Logout successful");
+        // ✅ Redirect to login page
+        window.location.href = "/login"; // Use this instead of navigate if you don't have useNavigate
       } else {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.log("Logout request failed, but token removed locally");
+        window.location.href = "/login"; // Still redirect even if server request fails
       }
     } catch (error) {
       console.error("Logout error: ", error);
+      // ✅ Even if logout fails, remove token and redirect
+      localStorage.removeItem('authToken');
+      window.location.href = "/login";
     }
   };
   return (
